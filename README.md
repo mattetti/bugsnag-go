@@ -1,4 +1,6 @@
 bugsnag_client
 ==============
 
-bugsnag.com API client in Go
+http://bugsnag.com API client in Go
+
+Please see https://bugsnag.com/docs/notifier-api for more info about the bugsnag API:
