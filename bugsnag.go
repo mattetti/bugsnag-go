@@ -129,13 +129,3 @@ type BugsnagMetaData struct {
     // This is shown as a section within the first tab
     SetOfKeys map[string]string `json:"setOfKeys"`
 }
-
-var notifier *BugsnagClient
-
-func init() {
-	notifier = &BugsnagClient{
-        Name: "Bugsnag Go client",
-        Version: "0.0.1",
-        URL: "https://github.com/toggl/bugsnag_client",
-    }
-}
