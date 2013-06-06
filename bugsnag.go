@@ -1,131 +1,140 @@
-// Package bugsnag is a client for bugsnag.com, written in Go.
-// API type descriptions are taken from https://bugsnag.com/docs/notifier-api (© Bugsnag Inc. 2013)
 package bugsnag
 
-// BugsnagClient describes the notifier itself. These properties are used 
-// within Bugsnag to track error rates from a notifier.
-type BugsnagClient struct {
-        // The notifier name
-    Name string `json:"name"`
-        // The notifier's current version
-    Version string `json:"version"`
-        // The URL associated with the notifier
-    URL string `json:"url"`
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"reflect"
+	"runtime"
+	"strconv"
+)
+
+var (
+	APIKey              string
+	AppVersion          string
+	OSVersion           string
+	ReleaseStage        = "development"
+	NotifyReleaseStages = []string{"production"}
+	AutoNotify          = true
+	UseSSL              = false
+	Verbose             = false
+	notifier            = &bugsnagNotifier{
+		Name:    "Bugsnag Go client",
+		Version: "0.0.1",
+		URL:     "https://github.com/toggl/bugsnag_client",
+	}
+)
+
+type (
+	bugsnagNotifier struct {
+		Name    string `json:"name"`
+		Version string `json:"version"`
+		URL     string `json:"url"`
+	}
+	bugsnagPayload struct {
+		APIKey   string           `json:"apiKey"`
+		Notifier *bugsnagNotifier `json:"notifier"`
+		Events   []bugsnagEvent   `json:"events"`
+	}
+	bugsnagException struct {
+		ErrorClass string              `json:"errorClass"`
+		Message    string              `json:"message,omitempty"`
+		Stacktrace []bugsnagStacktrace `json:"stacktrace,omitempty"`
+	}
+	bugsnagStacktrace struct {
+		File       string `json:"file"`
+		LineNumber string `json:"lineNumber"`
+		Method     string `json:"method"`
+		InProject  bool   `json:"inProject,omitempty"`
+	}
+	bugsnagEvent struct {
+		UserID       string                     `json:"userId,omitempty"`
+		AppVersion   string                     `json:"appVersion,omitempty"`
+		OSVersion    string                     `json:"osVersion,omitempty"`
+		ReleaseStage string                     `json:"releaseStage"`
+		Context      string                     `json:"context,omitempty"`
+		Exceptions   []bugsnagException         `json:"exceptions"`
+		MetaData     map[string]bugsnagMetaData `json:"metaData,omitempty"`
+	}
+	bugsnagMetaData struct {
+		Key       string            `json:"key"`
+		SetOfKeys map[string]string `json:"setOfKeys"`
+	}
+)
+
+func newBugsnagEvent(err error, userId string) bugsnagEvent {
+	exception := bugsnagException{
+		ErrorClass: reflect.TypeOf(err).String(),
+		Message:    err.Error(),
+		Stacktrace: getStacktrace(),
+	}
+	exceptions := []bugsnagException{exception}
+	return bugsnagEvent{
+		UserID:       userId,
+		AppVersion:   AppVersion,
+		OSVersion:    OSVersion,
+		ReleaseStage: ReleaseStage,
+		Exceptions:   exceptions,
+	}
 }
 
-
-// BugsnagPayload is the actual data that is serialized to JSON
-// and sent to bugsnag.com
-type BugsnagPayload struct {
-    // The API Key associated with the project. Informs Bugsnag which project 
-    // has generated this error.
-    APIKey string `json:"apiKey"` // c9d60ae4c7e70c4b6c4ebd3e8056d2b8
-
-    Notifier *BugsnagClient `json:"notifier"`
-
-    // An array of error events that Bugsnag should be notified of. A notifier
-    // can choose to group notices into an array to minimize network traffic, or
-    // can notify Bugsnag each time an event occurs. 
-    Events []BugsnagEvent `json:"events"`
+// Notify sends an error to bugsnag.com
+func Notify(err error, userId string) error {
+	event := newBugsnagEvent(err, userId)
+	return send([]bugsnagEvent{event})
 }
 
-// BugsnagException is data about the error that happened.
-// One payload can contain many Exceptions.
-type BugsnagException struct {
-    // The class of error that occurred. This field is used to group the
-    // errors together so should not contain any contextual information
-    // that would prevent correct grouping. This would ordinarily be the
-    // Exception name when dealing with an exception.
-    ErrorClass string `json:"errorClass"` // "NoMethodError"
-
-    // The error message associated with the error. Usually this will 
-    // contain some information about this specific instance of the error
-    // and is not used to group the errors (optional, default none).
-    Message string `json:"message,omitempty"` // "Unable to connect to database."
-
-    // An array of stacktrace objects. Each object represents one line in
-    // the exception's stacktrace. Bugsnag uses this information to help
-    // with error grouping, as well as displaying it to the user.
-    Stacktrace []BugsnagStacktrace `json:"stacktrace"`
+func send(events []bugsnagEvent) error {
+	payload := &bugsnagPayload{
+		Notifier: notifier,
+		APIKey:   APIKey,
+		Events:   events,
+	}
+	protocol := "http"
+	if UseSSL {
+		protocol = "https"
+	}
+	if b, err := json.MarshalIndent(payload, "", "\t"); err != nil {
+		return err
+	} else if resp, err := http.Post(protocol+"://notify.bugsnag.com", "application/json", bytes.NewBuffer(b)); err != nil {
+		return err
+	} else if resp.StatusCode != 200 {
+		return fmt.Errorf("Unexpected status code: %d", resp.StatusCode)
+	} else if Verbose {
+		println(string(b))
+		defer resp.Body.Close()
+		b, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		println(resp.StatusCode)
+		println(resp.Status)
+		println(string(b))
+	}
+	return nil
 }
 
-// BugsnagStacktrace represents one line in
-// the exception's stacktrace. Bugsnag uses this information to help
-// with error grouping, as well as displaying it to the user.
-type BugsnagStacktrace struct {
-    // The file that this stack frame was executing.
-    // It is recommended that you strip any unnecessary or common
-    // information from the beginning of the path.
-    File string `json:"file"` // "controllers/auth/session_controller.rb"
-
-    // The line of the file that this frame of the stack was in.
-    LineNumber string `json:"lineNumber"` // 1234
-
-    // The method that this particular stack frame is within.
-    Method string `json:"method"` // "create"
-
-    // Is this stacktrace line is in the user's project code, set 
-    // this to true. It is useful for developers to be able to see 
-    // which lines of a stacktrace are within their own application, 
-    // and which are within third party libraries. This boolean field
-    // allows Bugsnag to display this information in the stacktrace
-    // as well as use the information to help group errors better.
-    // (Optional, defaults to false).
-    InProject bool `json:"inProject,omitempty"` // true
-}
-
-// BugsnagEvent that Bugsnag should be notified of.
-type BugsnagEvent struct {
-    // A unique identifier for a user affected by this event. This could be 
-    // any distinct identifier that makes sense for your application/platform.
-    // This field is optional but highly recommended.
-    UserID string `json:"userId,omitempty"`
-
-    // The version number of the application which generated the error.
-    // (optional, default none)
-    AppVersion string `json:"appVersion,omitempty"`
-
-    // The operating system version of the client that the error was 
-    // generated on. (optional, default none)
-    OSVersion string `json:"osVersion,omitempty"`
-
-    // The release stage that this error occurred in, for example 
-    // "development" or "production". This can be any string, but "production"
-    // will be highlighted differently in bugsnag in the future, so please use
-    // "production" appropriately.
-    ReleaseStage string `json:"releaseStage"`
-
-    // A string representing what was happening in the application at the 
-    // time of the error. This string could be used for grouping purposes, 
-    // depending on the event.
-    // Usually this would represent the controller and action in a server 
-    // based project. It could represent the screen that the user was 
-    // interacting with in a client side project.
-    // For example,
-    //   * On Ruby on Rails the context could be controller#action
-    //   * In Android, the context could be the top most Activity.
-    //   * In iOS, the context could be the name of the top most UIViewController
-    Context string `json:"context"`
-
-    // An array of exceptions that occurred during this event. Most of the
-    // time there will only be one exception, but some languages support 
-    // "nested" or "caused by" exceptions. In this case, exceptions should 
-    // be unwrapped and added to the array one at a time. The first exception
-    // raised should be first in this array.
-    Exceptions []BugsnagException `json:"exceptions"`
-    // An object containing any further data you wish to attach to this error
-    // event. This should contain one or more objects, with each object being
-    // displayed in its own tab on the event details on the Bugsnag website.
-    // (Optional).
-    MetaData map[string]BugsnagMetaData `json:"metaData,omitempty"`
-}
-
-// BugsnagMetaData contains any further data you wish to attach to this error
-// event. This should contain one or more objects, with each object being
-// displayed in its own tab on the event details on the Bugsnag website.
-type BugsnagMetaData struct {
-    // A key value pair that will be displayed in the first tab
-    Key string  `json:"key"`
-    // This is shown as a section within the first tab
-    SetOfKeys map[string]string `json:"setOfKeys"`
+func getStacktrace() []bugsnagStacktrace {
+	var stacktrace []bugsnagStacktrace
+	i := 3 // First 3 lines are our own functions, not interesting
+	for {
+		if pc, file, line, ok := runtime.Caller(i); !ok {
+			break
+		} else {
+			methodName := "unnamed"
+			if f := runtime.FuncForPC(pc); f != nil {
+				methodName = f.Name()
+			}
+			traceLine := bugsnagStacktrace{
+				File:       file,
+				LineNumber: strconv.Itoa(line),
+				Method:     methodName,
+			}
+			stacktrace = append(stacktrace, traceLine)
+		}
+		i += 1
+	}
+	return stacktrace
 }
