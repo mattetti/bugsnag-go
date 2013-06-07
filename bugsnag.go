@@ -61,21 +61,6 @@ type (
 	}
 )
 
-func newBugsnagEvent(err error) *bugsnagEvent {
-	return &bugsnagEvent{
-		AppVersion:   AppVersion,
-		OSVersion:    OSVersion,
-		ReleaseStage: ReleaseStage,
-		Exceptions: []bugsnagException{
-			bugsnagException{
-				ErrorClass: reflect.TypeOf(err).String(),
-				Message:    err.Error(),
-				Stacktrace: getStacktrace(),
-			},
-		},
-	}
-}
-
 func send(events []*bugsnagEvent) error {
 	if APIKey == "" {
 		return errors.New("Missing APIKey")
@@ -134,14 +119,24 @@ func getStacktrace() []bugsnagStacktrace {
 
 // Notify sends an error to bugsnag
 func Notify(err error) error {
-	event := newBugsnagEvent(err)
-	return send([]*bugsnagEvent{event})
+	return send([]*bugsnagEvent{New(err)})
 }
 
 // New returns returns a bugsnag event instance, that can be further configured
 // before sending it.
 func New(err error) *bugsnagEvent {
-	return newBugsnagEvent(err)
+	return &bugsnagEvent{
+		AppVersion:   AppVersion,
+		OSVersion:    OSVersion,
+		ReleaseStage: ReleaseStage,
+		Exceptions: []bugsnagException{
+			bugsnagException{
+				ErrorClass: reflect.TypeOf(err).String(),
+				Message:    err.Error(),
+				Stacktrace: getStacktrace(),
+			},
+		},
+	}
 }
 
 // SetUserID sets the user_id property on the bugsnag event.
