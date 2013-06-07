@@ -2,12 +2,13 @@ package bugsnag
 
 import (
 	"errors"
+	"net/http"
 	"os"
 	"testing"
 )
 
 func TestNotify(t *testing.T) {
-	// Configure bugsnap
+	// Configure bugsnag
 	Verbose = true
 	APIKey = os.Getenv("BUGSNAG_APIKEY")
 	AppVersion = "1.2.3"
@@ -20,8 +21,22 @@ func TestNotify(t *testing.T) {
 	}
 }
 
+func TestNotifyRequest(t *testing.T) {
+	// Configure bugsnag
+	Verbose = true
+	APIKey = os.Getenv("BUGSNAG_APIKEY")
+
+	// Notify about an error
+	e := errors.New("This is a test")
+	if r, err := http.NewRequest("GET", "some URL", nil); err != nil {
+		t.Fatal(err)
+	} else if err := NotifyRequest(e, r); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestSetMetaDataBeforeNotify(t *testing.T) {
-	// Configure bugsnap
+	// Configure bugsnag
 	APIKey = os.Getenv("BUGSNAG_APIKEY")
 	Verbose = true
 
@@ -37,7 +52,7 @@ func TestSetMetaDataBeforeNotify(t *testing.T) {
 }
 
 func TestAddMetaDataBeforeNotify(t *testing.T) {
-	// Configure bugsnap
+	// Configure bugsnag
 	APIKey = os.Getenv("BUGSNAG_APIKEY")
 	Verbose = true
 
@@ -49,7 +64,7 @@ func TestAddMetaDataBeforeNotify(t *testing.T) {
 }
 
 func TestNewNotify(t *testing.T) {
-	// Configure bugsnap
+	// Configure bugsnag
 	APIKey = os.Getenv("BUGSNAG_APIKEY")
 	Verbose = true
 

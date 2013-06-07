@@ -119,7 +119,13 @@ func getStacktrace() []bugsnagStacktrace {
 
 // Notify sends an error to bugsnag
 func Notify(err error) error {
-	return send([]*bugsnagEvent{New(err)})
+	return New(err).Notify()
+}
+
+// NotifyRequest sends an error to bugsnag, and sets request
+// URL as the event context.
+func NotifyRequest(err error, r *http.Request) error {
+	return New(err).SetContext(r.URL.String()).Notify()
 }
 
 // New returns returns a bugsnag event instance, that can be further configured
@@ -142,6 +148,11 @@ func New(err error) *bugsnagEvent {
 // SetUserID sets the user_id property on the bugsnag event.
 func (event *bugsnagEvent) SetUserID(userID string) *bugsnagEvent {
 	event.UserID = userID
+	return event
+}
+
+func (event *bugsnagEvent) SetContext(context string) *bugsnagEvent {
+	event.Context = context
 	return event
 }
 
