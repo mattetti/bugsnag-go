@@ -24,9 +24,15 @@ func main() {
 	// Then, out of the blue, an error happens:
 	err := errors.New("Something bad just happened")
 	bugsnag.Notify(err)
+	
+	// To notify about a HTTP handler error (assuming r is a *http.Request):
+	// bugsnag.NotifyRequest(err, r)
 
 	// In case you need to supply the user ID:
 	bugsnag.New(err).SetUserID("12345").Notify()
+
+	// To report what your app was doing while error happened:
+	bugsnag.New(err).SetContext("something").Notify()
 
 	// Metadata can be set all at once:
 	values := map[string]interface{}{
