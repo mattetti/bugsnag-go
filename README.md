@@ -12,18 +12,34 @@ How to use
 package main
 
 import (
-  "errors"
-  "github.com/toggl/bugsnag"
+    "errors"
+	"github.com/toggl/bugsnag"
 )
 
 func main() {
-  // First, configure bugsnag
-  bugsnag.APIKey = "c9d60ae4c7e70c4b6c4ebd3e8056d2b8"
-  bugsnag.Verbose = true
+	// First, configure bugsnag
+	bugsnag.APIKey = "c9d60ae4c7e70c4b6c4ebd3e8056d2b8"
+	bugsnag.Verbose = true
 
-  // Then, out of the blue, an error happens:
-  err := errors.New("Something bad just happened")
-  userID := "12345"
-  bugsnag.Notify(err, userID)
+	// Then, out of the blue, an error happens:
+	err := errors.New("Something bad just happened")
+	bugsnag.Notify(err)
+
+	// In case you need to supply the user ID:
+	bugsnag.New(err).SetUserID("12345").Notify()
+
+	// Metadata can be set all at once:
+	values := map[string]interface{}{
+		"user_agent": "ie4",
+		"account_id": 5555,
+	}
+	bugsnag.New(err).SetMetaData("tab_name_in_bugsnag", values).Notify()
+
+	// Or one key-value pair at a time:
+	bugsnag.New(err).AddMetaData("tab_name_in_bugsnag", "user_agent", "ie4").AddMetaData("tab_name_in_bugsnag", "account_id", 5555).Notify()
+
+	// AddMetaData(), SetMetaData() and SetUser() can be chained together (as above)
+	// or left out alltogether:
+	bugsnag.New(err).Notify()
 }
 ```
