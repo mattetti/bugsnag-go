@@ -21,7 +21,7 @@ var (
 	AutoNotify          = true
 	UseSSL              = false
 	Verbose             = false
-	notifier            = &bugsnagNotifier{
+	Notifier            = &bugsnagNotifier{
 		Name:    "Bugsnag Go client",
 		Version: "0.0.1",
 		URL:     "https://github.com/toggl/bugsnag_client",
@@ -66,7 +66,7 @@ func send(events []*bugsnagEvent) error {
 		return errors.New("Missing APIKey")
 	}
 	payload := &bugsnagPayload{
-		Notifier: notifier,
+		Notifier: Notifier,
 		APIKey:   APIKey,
 		Events:   events,
 	}
