@@ -3,6 +3,7 @@ package bugsnag
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -15,7 +16,7 @@ var (
 	APIKey              string
 	AppVersion          string
 	OSVersion           string
-	ReleaseStage        = "development"
+	ReleaseStage        = "production"
 	NotifyReleaseStages = []string{"production"}
 	AutoNotify          = true
 	UseSSL              = false
@@ -36,7 +37,7 @@ type (
 	bugsnagPayload struct {
 		APIKey   string           `json:"apiKey"`
 		Notifier *bugsnagNotifier `json:"notifier"`
-		Events   []bugsnagEvent   `json:"events"`
+		Events   []*bugsnagEvent  `json:"events"`
 	}
 	bugsnagException struct {
 		ErrorClass string              `json:"errorClass"`
@@ -50,43 +51,35 @@ type (
 		InProject  bool   `json:"inProject,omitempty"`
 	}
 	bugsnagEvent struct {
-		UserID       string                     `json:"userId,omitempty"`
-		AppVersion   string                     `json:"appVersion,omitempty"`
-		OSVersion    string                     `json:"osVersion,omitempty"`
-		ReleaseStage string                     `json:"releaseStage"`
-		Context      string                     `json:"context,omitempty"`
-		Exceptions   []bugsnagException         `json:"exceptions"`
-		MetaData     map[string]bugsnagMetaData `json:"metaData,omitempty"`
-	}
-	bugsnagMetaData struct {
-		Key       string            `json:"key"`
-		SetOfKeys map[string]string `json:"setOfKeys"`
+		UserID       string                            `json:"userId,omitempty"`
+		AppVersion   string                            `json:"appVersion,omitempty"`
+		OSVersion    string                            `json:"osVersion,omitempty"`
+		ReleaseStage string                            `json:"releaseStage"`
+		Context      string                            `json:"context,omitempty"`
+		Exceptions   []bugsnagException                `json:"exceptions"`
+		MetaData     map[string]map[string]interface{} `json:"metaData,omitempty"`
 	}
 )
 
-func newBugsnagEvent(err error, userId string) bugsnagEvent {
-	exception := bugsnagException{
-		ErrorClass: reflect.TypeOf(err).String(),
-		Message:    err.Error(),
-		Stacktrace: getStacktrace(),
-	}
-	exceptions := []bugsnagException{exception}
-	return bugsnagEvent{
-		UserID:       userId,
+func newBugsnagEvent(err error) *bugsnagEvent {
+	return &bugsnagEvent{
 		AppVersion:   AppVersion,
 		OSVersion:    OSVersion,
 		ReleaseStage: ReleaseStage,
-		Exceptions:   exceptions,
+		Exceptions: []bugsnagException{
+			bugsnagException{
+				ErrorClass: reflect.TypeOf(err).String(),
+				Message:    err.Error(),
+				Stacktrace: getStacktrace(),
+			},
+		},
 	}
 }
 
-// Notify sends an error to bugsnag.com
-func Notify(err error, userId string) error {
-	event := newBugsnagEvent(err, userId)
-	return send([]bugsnagEvent{event})
-}
-
-func send(events []bugsnagEvent) error {
+func send(events []*bugsnagEvent) error {
+	if APIKey == "" {
+		return errors.New("Missing APIKey")
+	}
 	payload := &bugsnagPayload{
 		Notifier: notifier,
 		APIKey:   APIKey,
@@ -137,4 +130,48 @@ func getStacktrace() []bugsnagStacktrace {
 		i += 1
 	}
 	return stacktrace
+}
+
+// Notify sends an error to bugsnag
+func Notify(err error) error {
+	event := newBugsnagEvent(err)
+	return send([]*bugsnagEvent{event})
+}
+
+// New returns returns a bugsnag event instance, that can be further configured
+// before sending it.
+func New(err error) *bugsnagEvent {
+	return newBugsnagEvent(err)
+}
+
+// SetUserID sets the user_id property on the bugsnag event.
+func (event *bugsnagEvent) SetUserID(userID string) *bugsnagEvent {
+	event.UserID = userID
+	return event
+}
+
+// SetMetaData sets bunch of key-value pairs under a tab in bugsnag
+func (event *bugsnagEvent) SetMetaData(tab string, values map[string]interface{}) *bugsnagEvent {
+	if event.MetaData == nil {
+		event.MetaData = make(map[string]map[string]interface{})
+	}
+	event.MetaData[tab] = values
+	return event
+}
+
+// AddMeta adds a key-value pair under a tab in bugsnag
+func (event *bugsnagEvent) AddMetaData(tab string, name string, value interface{}) *bugsnagEvent {
+	if event.MetaData == nil {
+		event.MetaData = make(map[string]map[string]interface{})
+	}
+	if event.MetaData[tab] == nil {
+		event.MetaData[tab] = make(map[string]interface{})
+	}
+	event.MetaData[tab][name] = value
+	return event
+}
+
+// Notify sends the configured event off to bugsnag.
+func (event *bugsnagEvent) Notify() error {
+	return send([]*bugsnagEvent{event})
 }
