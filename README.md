@@ -29,23 +29,19 @@ func main() {
 	// bugsnag.NotifyRequest(err, r)
 
 	// In case you need to supply the user ID:
-	bugsnag.New(err).SetUserID("12345").Notify()
+	bugsnag.New(err).WithUserID("12345").Notify()
 
 	// To report what your app was doing while error happened:
-	bugsnag.New(err).SetContext("something").Notify()
+	bugsnag.New(err).WithContext("something").Notify()
 
 	// Metadata can be set all at once:
 	values := map[string]interface{}{
 		"user_agent": "ie4",
 		"account_id": 5555,
 	}
-	bugsnag.New(err).SetMetaData("tab_name_in_bugsnag", values).Notify()
+	bugsnag.New(err).WithMetaDataValues("tab_name_in_bugsnag", values).Notify()
 
 	// Or one key-value pair at a time:
-	bugsnag.New(err).AddMetaData("tab_name_in_bugsnag", "user_agent", "ie4").AddMetaData("tab_name_in_bugsnag", "account_id", 5555).Notify()
-
-	// AddMetaData(), SetMetaData() and SetUser() can be chained together (as above)
-	// or left out alltogether:
-	bugsnag.New(err).Notify()
+	bugsnag.New(err).WithMetaData("tab_name_in_bugsnag", "user_agent", "ie4").WithMetaData("tab_name_in_bugsnag", "account_id", 5555).Notify()
 }
 ```

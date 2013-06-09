@@ -125,7 +125,7 @@ func Notify(err error) error {
 // NotifyRequest sends an error to bugsnag, and sets request
 // URL as the event context.
 func NotifyRequest(err error, r *http.Request) error {
-	return New(err).SetContext(r.URL.String()).Notify()
+	return New(err).WithContext(r.URL.String()).Notify()
 }
 
 // New returns returns a bugsnag event instance, that can be further configured
@@ -145,19 +145,19 @@ func New(err error) *bugsnagEvent {
 	}
 }
 
-// SetUserID sets the user_id property on the bugsnag event.
-func (event *bugsnagEvent) SetUserID(userID string) *bugsnagEvent {
+// WithUserID sets the user_id property on the bugsnag event.
+func (event *bugsnagEvent) WithUserID(userID string) *bugsnagEvent {
 	event.UserID = userID
 	return event
 }
 
-func (event *bugsnagEvent) SetContext(context string) *bugsnagEvent {
+func (event *bugsnagEvent) WithContext(context string) *bugsnagEvent {
 	event.Context = context
 	return event
 }
 
-// SetMetaData sets bunch of key-value pairs under a tab in bugsnag
-func (event *bugsnagEvent) SetMetaData(tab string, values map[string]interface{}) *bugsnagEvent {
+// WithMetaDataValues sets bunch of key-value pairs under a tab in bugsnag
+func (event *bugsnagEvent) WithMetaDataValues(tab string, values map[string]interface{}) *bugsnagEvent {
 	if event.MetaData == nil {
 		event.MetaData = make(map[string]map[string]interface{})
 	}
@@ -165,8 +165,8 @@ func (event *bugsnagEvent) SetMetaData(tab string, values map[string]interface{}
 	return event
 }
 
-// AddMeta adds a key-value pair under a tab in bugsnag
-func (event *bugsnagEvent) AddMetaData(tab string, name string, value interface{}) *bugsnagEvent {
+// WithMetaData adds a key-value pair under a tab in bugsnag
+func (event *bugsnagEvent) WithMetaData(tab string, name string, value interface{}) *bugsnagEvent {
 	if event.MetaData == nil {
 		event.MetaData = make(map[string]map[string]interface{})
 	}

@@ -46,19 +46,19 @@ func TestSetMetaDataBeforeNotify(t *testing.T) {
 		"account_id": 5555,
 		"user_agent": "ie4",
 	}
-	if err := New(e).SetUserID("12345").SetMetaData("user_info", values).Notify(); err != nil {
+	if err := New(e).WithUserID("12345").WithMetaDataValues("user_info", values).Notify(); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func TestAddMetaDataBeforeNotify(t *testing.T) {
+func TestWithMetaDataBeforeNotify(t *testing.T) {
 	// Configure bugsnag
 	APIKey = os.Getenv("BUGSNAG_APIKEY")
 	Verbose = true
 
 	// Notify about another error, with more details
 	e := errors.New("Another error")
-	if err := New(e).SetUserID("12345").AddMetaData("user_info", "name", "mr. Fu").Notify(); err != nil {
+	if err := New(e).WithUserID("12345").WithMetaData("user_info", "name", "mr. Fu").Notify(); err != nil {
 		t.Fatal(err)
 	}
 }
