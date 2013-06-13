@@ -179,5 +179,10 @@ func (event *bugsnagEvent) WithMetaData(tab string, name string, value interface
 
 // Notify sends the configured event off to bugsnag.
 func (event *bugsnagEvent) Notify() error {
-	return send([]*bugsnagEvent{event})
+	for _, stage := range NotifyReleaseStages {
+		if stage == event.ReleaseStage {
+			return send([]*bugsnagEvent{event})
+		}
+	}
+	return nil
 }
