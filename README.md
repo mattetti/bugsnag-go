@@ -17,8 +17,13 @@ import (
 )
 
 func main() {
-	// First, configure bugsnag
+	// First, configure bugsnag. Only APIKey is mandatory, other settings are optional.
 	bugsnag.APIKey = "c9d60ae4c7e70c4b6c4ebd3e8056d2b8"
+	bugsnag.AppVersion = "1.0.2"
+	bugsnag.OSVersion = "Windows XP"
+	bugsnag.ReleaseStage = "production"
+	bugsnag.NotifyReleaseStages = []string{"production"}
+	bugsnag.UseSSL = true
 	bugsnag.Verbose = true
 
 	// Then, out of the blue, an error happens:
