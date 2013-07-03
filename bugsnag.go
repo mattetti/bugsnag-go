@@ -23,7 +23,7 @@ var (
 	Verbose             = false
 	Notifier            = &bugsnagNotifier{
 		Name:    "Bugsnag Go client",
-		Version: "0.0.1",
+		Version: "0.0.2",
 		URL:     "https://github.com/toggl/bugsnag_client",
 	}
 )
