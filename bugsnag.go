@@ -122,19 +122,10 @@ func Notify(err error) error {
 	return New(err).Notify()
 }
 
-// NotifyRequest sends an error to bugsnag, sets request
-// URL as the event context and request body as event meta-data
+// NotifyRequest sends an error to bugsnag, and sets request
+// URL as the event context.
 func NotifyRequest(err error, r *http.Request) error {
-	n := New(err).WithContext(r.URL.String())
-	if r.Body != nil {
-		defer r.Body.Close()
-		if b, err := ioutil.ReadAll(r.Body); err == nil {
-			if len(b) > 0 {
-				n.WithMetaData("params", "body", string(b))
-			}
-		}
-	}
-	return n.Notify()
+	return New(err).WithContext(r.URL.String()).Notify()
 }
 
 // New returns returns a bugsnag event instance, that can be further configured
