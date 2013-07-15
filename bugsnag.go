@@ -19,12 +19,12 @@ var (
 	ReleaseStage        = "production"
 	NotifyReleaseStages = []string{"production"}
 	AutoNotify          = true
-	UseSSL              = false
+	UseSSL              = true
 	Verbose             = false
 	Notifier            = &bugsnagNotifier{
 		Name:    "Bugsnag Go client",
 		Version: "0.0.2",
-		URL:     "https://github.com/toggl/bugsnag_client",
+		URL:     "https://github.com/mattetti/bugsnag_client",
 	}
 )
 
