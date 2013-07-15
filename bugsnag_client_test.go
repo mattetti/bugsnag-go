@@ -74,3 +74,29 @@ func TestNewNotify(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestCapturePanic(t *testing.T) {
+	// Configure bugsnag
+	Verbose = true
+	APIKey = os.Getenv("BUGSNAG_APIKEY")
+
+	// Notify about an error
+	r, err := http.NewRequest("GET", "some URL", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer func() {
+		if rec := recover(); rec != nil {
+			if rec.(string) != "This should be reported!" {
+				t.Fatal("Unexpected capture: " + rec.(string))
+			}
+		} else {
+			t.Fatal("Panic not captured")
+		}
+	}()
+
+	defer CapturePanic(r)
+
+	panic("This should be reported!")
+}

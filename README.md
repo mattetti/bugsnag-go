@@ -48,5 +48,8 @@ func main() {
 
 	// Or one key-value pair at a time:
 	bugsnag.New(err).WithMetaData("tab_name_in_bugsnag", "user_agent", "ie4").WithMetaData("tab_name_in_bugsnag", "account_id", 5555).Notify()
+
+	// To capture a HTTP handler panic, add this to your handler (assuming r is a *http.Request):
+	// defer bugsnag.CapturePanic(r)
 }
 ```

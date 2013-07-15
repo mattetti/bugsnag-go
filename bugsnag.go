@@ -128,6 +128,18 @@ func NotifyRequest(err error, r *http.Request) error {
 	return New(err).WithContext(r.URL.String()).Notify()
 }
 
+// CapturePanic reports panics happening while processing a HTTP request
+func CapturePanic(r *http.Request) {
+	if recovered := recover(); recovered != nil {
+		if err, ok := recovered.(error); ok {
+			NotifyRequest(err, r)
+		} else if err, ok := recovered.(string); ok {
+			NotifyRequest(errors.New(err), r)
+		}
+		panic(recovered)
+	}
+}
+
 // New returns returns a bugsnag event instance, that can be further configured
 // before sending it.
 func New(err error) *bugsnagEvent {
@@ -186,3 +198,4 @@ func (event *bugsnagEvent) Notify() error {
 	}
 	return nil
 }
+
