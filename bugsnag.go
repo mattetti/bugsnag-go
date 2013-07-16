@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"runtime"
 	"strconv"
+  "os"
 )
 
 var (
@@ -21,6 +22,7 @@ var (
 	AutoNotify          = true
 	UseSSL              = true
 	Verbose             = false
+  Hostname            string
 	Notifier            = &bugsnagNotifier{
 		Name:    "Bugsnag Go client",
 		Version: "0.0.2",
@@ -60,6 +62,10 @@ type (
 		MetaData     map[string]map[string]interface{} `json:"metaData,omitempty"`
 	}
 )
+
+func init(){
+ Hostname, _ = os.Hostname()
+}
 
 func send(events []*bugsnagEvent) error {
 	if APIKey == "" {
@@ -123,9 +129,10 @@ func Notify(err error) error {
 }
 
 // NotifyRequest sends an error to bugsnag, and sets request
-// URL as the event context.
+// URL as the event context
+// and marshals down the request content.
 func NotifyRequest(err error, r *http.Request) error {
-	return New(err).WithContext(r.URL.String()).Notify()
+	return New(err).WithContext(r.URL.String()).WithMetaData("request", "dump", r).Notify()
 }
 
 // CapturePanic reports panics happening while processing a HTTP request
@@ -193,6 +200,10 @@ func (event *bugsnagEvent) WithMetaData(tab string, name string, value interface
 func (event *bugsnagEvent) Notify() error {
 	for _, stage := range NotifyReleaseStages {
 		if stage == event.ReleaseStage {
+      if Hostname != "" {
+        // Custom metadata to know what machine is reporting the error.
+        event.WithMetaData("host", "name", Hostname)
+      }
 			return send([]*bugsnagEvent{event})
 		}
 	}
