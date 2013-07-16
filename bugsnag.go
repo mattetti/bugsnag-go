@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"reflect"
 	"runtime"
 	"strconv"
-  "os"
 )
 
 var (
@@ -22,7 +22,7 @@ var (
 	AutoNotify          = true
 	UseSSL              = true
 	Verbose             = false
-  Hostname            string
+	Hostname            string
 	Notifier            = &bugsnagNotifier{
 		Name:    "Bugsnag Go client",
 		Version: "0.0.2",
@@ -63,8 +63,8 @@ type (
 	}
 )
 
-func init(){
- Hostname, _ = os.Hostname()
+func init() {
+	Hostname, _ = os.Hostname()
 }
 
 func send(events []*bugsnagEvent) error {
@@ -111,12 +111,14 @@ func getStacktrace() []bugsnagStacktrace {
 			if f := runtime.FuncForPC(pc); f != nil {
 				methodName = f.Name()
 			}
-			traceLine := bugsnagStacktrace{
-				File:       file,
-				LineNumber: strconv.Itoa(line),
-				Method:     methodName,
+			if methodName != "panic" {
+				traceLine := bugsnagStacktrace{
+					File:       file,
+					LineNumber: strconv.Itoa(line),
+					Method:     methodName,
+				}
+				stacktrace = append(stacktrace, traceLine)
 			}
-			stacktrace = append(stacktrace, traceLine)
 		}
 		i += 1
 	}
@@ -200,13 +202,12 @@ func (event *bugsnagEvent) WithMetaData(tab string, name string, value interface
 func (event *bugsnagEvent) Notify() error {
 	for _, stage := range NotifyReleaseStages {
 		if stage == event.ReleaseStage {
-      if Hostname != "" {
-        // Custom metadata to know what machine is reporting the error.
-        event.WithMetaData("host", "name", Hostname)
-      }
+			if Hostname != "" {
+				// Custom metadata to know what machine is reporting the error.
+				event.WithMetaData("host", "name", Hostname)
+			}
 			return send([]*bugsnagEvent{event})
 		}
 	}
 	return nil
 }
-
