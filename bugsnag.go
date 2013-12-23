@@ -80,15 +80,20 @@ func send(events []*bugsnagEvent) error {
 	if UseSSL {
 		protocol = "https"
 	}
-	if b, err := json.MarshalIndent(payload, "", "\t"); err != nil {
+	b, err := json.MarshalIndent(payload, "", "\t")
+	if err != nil {
 		return err
-	} else if resp, err := http.Post(protocol+"://notify.bugsnag.com", "application/json", bytes.NewBuffer(b)); err != nil {
+	}
+	resp, err := http.Post(protocol+"://notify.bugsnag.com", "application/json", bytes.NewBuffer(b))
+	if err != nil {
 		return err
-	} else if resp.StatusCode != 200 {
+	}
+	// Always close a response's Body (which is always non-nil if err==nil)
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
 		return fmt.Errorf("Unexpected status code: %d", resp.StatusCode)
 	} else if Verbose {
 		println(string(b))
-		defer resp.Body.Close()
 		b, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return err
