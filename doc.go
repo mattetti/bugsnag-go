@@ -59,5 +59,4 @@ The bugsnag event instance sends a stacktrace to the API in the metadata. This s
 
 	bugsnag.New(err).Notify()
 */
-
 package bugsnag
