@@ -28,6 +28,7 @@ var (
 		Version: "0.0.2",
 		URL:     "https://github.com/mattetti/bugsnag_client",
 	}
+	TraceFilterFunc StacktraceFunc
 )
 
 type (
@@ -61,6 +62,7 @@ type (
 		Exceptions   []bugsnagException                `json:"exceptions"`
 		MetaData     map[string]map[string]interface{} `json:"metaData,omitempty"`
 	}
+	StacktraceFunc func(traces []bugsnagStacktrace) []bugsnagStacktrace
 )
 
 func init() {
@@ -126,6 +128,9 @@ func getStacktrace() []bugsnagStacktrace {
 			}
 		}
 		i += 1
+	}
+	if TraceFilterFunc != nil {
+		stacktrace = TraceFilterFunc(stacktrace)
 	}
 	return stacktrace
 }

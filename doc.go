@@ -49,6 +49,15 @@ Usage:
 		// To capture a HTTP handler panic, add this to your handler (assuming r is a *http.Request):
 		// defer bugsnag.CapturePanic(r)
 	}
+
+The bugsnag event instance sends a stacktrace to the API in the metadata. This stacktrace can be filtered to remove application-specific noise:
+
+	bugsnag.TraceFilterFunc = func(traces []bugsnagStacktrace) []bugsnagStacktrace {
+		// modify the stacktrace here
+		return traces
+	}
+
+	bugsnag.New(err).Notify()
 */
 
 package bugsnag

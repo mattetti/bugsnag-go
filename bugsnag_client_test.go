@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -99,4 +100,24 @@ func TestCapturePanic(t *testing.T) {
 	defer CapturePanic(r)
 
 	panic("This should be reported!")
+}
+
+func TestStacktraceFunc(t *testing.T) {
+	TraceFilterFunc = func(traces []bugsnagStacktrace) []bugsnagStacktrace {
+		for i := 0; i < len(traces); i++ {
+			traces[i].File = "ceci n'est pas un string" + traces[i].File
+		}
+		return traces
+	}
+	defer func() {
+		TraceFilterFunc = nil
+	}()
+
+	traces := getStacktrace()
+	for _, trace := range traces {
+		if !strings.HasPrefix(trace.File, "ceci n'est pas un string") {
+			t.Fatal("TraceFilterFunc is not correctly filtering the stacktrace")
+		}
+	}
+
 }
